@@ -1,10 +1,12 @@
-FROM alpine:3.20
+FROM alpine:3.18
 
-# Установка необходимых пакетов
+# Установка необходимых пакетов (включая зависимости для fluxbox и midori)
 RUN apk update && apk add --no-cache \
     xvfb \
     x11vnc \
-    openbox \
+    fluxbox \
+    xterm \
+    terminus-font \
     midori \
     novnc \
     websockify \
@@ -15,7 +17,7 @@ RUN echo '#!/bin/sh\n\
 export DISPLAY=:0\n\
 Xvfb :0 -screen 0 1280x800x24 &\n\
 sleep 5\n\
-openbox-session &\n\
+fluxbox &\n\
 sleep 5\n\
 midori &\n\
 x11vnc -display :0 -nopw -forever -shared &\n\
