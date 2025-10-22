@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     x11vnc \
     fluxbox \
     xterm \
-    midori \
+    firefox-esr \
     novnc \
     websockify \
     git \
