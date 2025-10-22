@@ -5,15 +5,21 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=":1"
 ENV USER=root
 
-# Основные пакеты
+# Основные пакеты - устанавливаем tigervnc-common отдельно чтобы гарантировать vncpasswd
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-    tigervnc-standalone-server tigervnc-common \
     fluxbox xterm x11-xserver-utils \
     firefox-esr \
     python3 python3-pip python3-websockify \
     git wget ca-certificates \
     net-tools procps \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем TigerVNC отдельно чтобы гарантировать наличие vncpasswd
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    tigervnc-standalone-server tigervnc-common \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -28,7 +34,7 @@ RUN mkdir -p /root/.vnc
 RUN cat > /root/.vnc/xstartup <<'XSTART' && chmod +x /root/.vnc/xstartup
 #!/bin/sh
 export XKL_XMODMAP_DISABLE=1
-[ -r $HOME/.Xresources ] && xrdb $HOME/.Xresources
+[ -r \$HOME/.Xresources ] && xrdb \$HOME/.Xresources
 xsetroot -solid grey
 export XDG_SESSION_TYPE=x11
 export GNOME_SHELL_SESSION_MODE=classic
@@ -39,8 +45,8 @@ sleep 1
 firefox-esr --no-remote "about:blank" &
 XSTART
 
-# Устанавливаем пароль VNC
-RUN echo "password" | vncpasswd -f > /root/.vnc/passwd \
+# Устанавливаем пароль VNC - используем полный путь к vncpasswd
+RUN echo "password" | /usr/bin/vncpasswd -f > /root/.vnc/passwd \
  && chmod 600 /root/.vnc/passwd
 
 # Создаём скрипт запуска
@@ -49,7 +55,7 @@ RUN cat > /entrypoint.sh <<'ENTRY' && chmod +x /entrypoint.sh
 set -e
 
 # Убиваем существующие VNC серверы
-vncserver -kill :1 || true
+vncserver -kill :1 2>/dev/null || true
 rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
 
 # Запускаем VNC сервер
@@ -64,6 +70,7 @@ fi
 
 echo "VNC доступен на порту 5901"
 echo "noVNC доступен на порту 6080"
+echo "Пароль VNC: password"
 
 # Держим контейнер живым
 tail -f /dev/null
