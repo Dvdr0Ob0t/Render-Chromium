@@ -1,15 +1,16 @@
 FROM alpine:3.18
 
 # Установка необходимых пакетов (включая зависимости для fluxbox и midori)
-RUN apk update && apk add --no-cache \
+RUN echo "@edgecommunity https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
+    apk update && apk add --no-cache \
     xvfb \
     x11vnc \
     fluxbox \
     xterm \
     terminus-font \
     midori \
-    novnc \
-    websockify \
+    novnc@edgecommunity \
+    websockify@edgecommunity \
     && rm -rf /var/cache/apk/*
 
 # Создание скрипта запуска
