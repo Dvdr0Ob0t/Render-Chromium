@@ -1,40 +1,29 @@
-FROM alpine:edge
+FROM alpine:3.20
 
-# Устанавливаем зависимости
-RUN apk --update --upgrade add \
-      bash \
-      fluxbox \
-      supervisor \
-      xvfb \
-      x11vnc \
-      git \
-      curl \
-      fuse \
-      udev \
-      python3 && \
-    # Клонируем noVNC и websockify вручную
-    git clone --depth 1 https://github.com/novnc/noVNC.git /root/noVNC && \
-    git clone --depth 1 https://github.com/novnc/websockify /root/noVNC/utils/websockify && \
-    rm -rf /root/noVNC/.git /root/noVNC/utils/websockify/.git && \
-    apk del git && \
-    rm -rf /var/cache/apk/*
+# Установка необходимых пакетов
+RUN apk update && apk add --no-cache \
+    xvfb \
+    x11vnc \
+    openbox \
+    midori \
+    novnc \
+    websockify \
+    && rm -rf /var/cache/apk/*
 
-# Скачиваем Midori AppImage (лёгкий браузер)
-RUN curl -L -o /usr/local/bin/midori.AppImage \
-    https://github.com/midori-browser/core/releases/download/v11.3/midori-v11.3-x86_64.AppImage && \
-    chmod +x /usr/local/bin/midori.AppImage && \
-    printf '#!/bin/sh\nexec /usr/local/bin/midori.AppImage "$@"' > /usr/local/bin/midori && \
-    chmod +x /usr/local/bin/midori
+# Создание скрипта запуска
+RUN echo '#!/bin/sh\n\
+export DISPLAY=:0\n\
+Xvfb :0 -screen 0 1280x800x24 &\n\
+sleep 5\n\
+openbox-session &\n\
+sleep 5\n\
+midori &\n\
+x11vnc -display :0 -nopw -forever -shared &\n\
+/usr/share/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 6080\n\
+tail -f /dev/null' > /entrypoint.sh \
+    && chmod +x /entrypoint.sh
 
-# Настройки окружения
-ENV HOME=/root \
-    DISPLAY=:0.0 \
-    DISPLAY_WIDTH=1280 \
-    DISPLAY_HEIGHT=720 \
-    PORT=8080
+# Экспонируем порты: 5900 для VNC, 6080 для noVNC
+EXPOSE 5900 6080
 
-# Supervisor config
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-EXPOSE 8080
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+ENTRYPOINT ["/entrypoint.sh"]
