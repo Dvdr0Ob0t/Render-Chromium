@@ -1,29 +1,37 @@
-FROM alpine:3.20
+FROM alpine:edge
 
-# Обновление и установка зависимостей
-RUN apk add --no-cache \
-    chromium \
-    xvfb \
-    fluxbox \
-    x11vnc \
-    novnc \
-    websockify \
-    bash \
-    curl \
-    supervisor
-
-# Создаём рабочие каталоги
-RUN mkdir -p /root/.config /var/log/supervisor
+# Добавляем репозитории и пакеты
+RUN echo "http://dl-3.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
+    apk --update --upgrade add \
+      bash \
+      fluxbox \
+      git \
+      supervisor \
+      xvfb \
+      x11vnc \
+      midori \
+      && \
+    # Устанавливаем noVNC и websockify
+    git clone --depth 1 https://github.com/novnc/noVNC.git /root/noVNC && \
+    git clone --depth 1 https://github.com/novnc/websockify /root/noVNC/utils/websockify && \
+    rm -rf /root/noVNC/.git /root/noVNC/utils/websockify/.git && \
+    # Чистим кэш
+    apk del git && \
+    rm -rf /var/cache/apk/* && \
+    sed -i -- "s/ps -p/ps -o pid | grep/g" /root/noVNC/utils/launch.sh
 
 # Настройки окружения
-ENV DISPLAY=:0 \
-    SCREEN_WIDTH=1280 \
-    SCREEN_HEIGHT=720 \
-    PORT=10000
+ENV HOME=/root \
+    LANG=en_US.UTF-8 \
+    DISPLAY=:0.0 \
+    DISPLAY_WIDTH=1280 \
+    DISPLAY_HEIGHT=720 \
+    PORT=8080
 
-# Конфиг supervisord для автозапуска
-COPY supervisord.conf /etc/supervisord.conf
+# Копируем supervisord конфиг
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-EXPOSE 10000
+EXPOSE 8080
 
-CMD ["supervisord", "-c", "/etc/supervisord.conf"]
+# Стартуем supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
