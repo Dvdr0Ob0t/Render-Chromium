@@ -1,6 +1,6 @@
 FROM alpine:edge
 
-# Устанавливаем базу с X11, VNC, supervisor, и легкий WM (fluxbox)
+# Устанавливаем зависимости
 RUN echo "http://dl-3.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
     apk --update --upgrade add \
       bash \
@@ -11,16 +11,17 @@ RUN echo "http://dl-3.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositor
       git \
       curl \
       fuse \
-      udev && \
-    # Ставим noVNC и websockify вручную
+      udev \
+      python3 \
+      py3-websockify && \
+    # Клонируем noVNC
     git clone --depth 1 https://github.com/novnc/noVNC.git /root/noVNC && \
     git clone --depth 1 https://github.com/novnc/websockify /root/noVNC/utils/websockify && \
     rm -rf /root/noVNC/.git /root/noVNC/utils/websockify/.git && \
     apk del git && \
-    rm -rf /var/cache/apk/* && \
-    sed -i 's/ps -p/ps -o pid | grep/' /root/noVNC/utils/launch.sh
+    rm -rf /var/cache/apk/*
 
-# Скачиваем Midori AppImage (легкий браузер)
+# Скачиваем Midori AppImage (универсальный бинарь)
 RUN curl -L -o /usr/local/bin/midori.AppImage \
     https://github.com/midori-browser/core/releases/download/v11.3/midori-v11.3-x86_64.AppImage && \
     chmod +x /usr/local/bin/midori.AppImage && \
@@ -37,5 +38,4 @@ ENV HOME=/root \
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 8080
-
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
